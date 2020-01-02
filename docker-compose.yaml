@@ -1,0 +1,30 @@
+version: "3"
+services:
+  frontend:
+    image: nginx:1.17-alpine
+    ports:
+    - "3000:80"
+    volumes:
+      - "./frontend:/usr/share/nginx/html"
+
+  emulator:
+    build:
+      context: buses-emulator
+      dockerfile: Dockerfile
+    environment:
+      EMULATOR_SERVER_URL: "ws://server:8080"
+      EMULATOR_BUSES_PER_ROUTE: 10
+      EMULATOR_CONNECTIONS_COUNT: 5
+      GOMAXPROCS: 1
+
+  server:
+    build:
+      context: ws-server
+      dockerfile: Dockerfile
+    environment:
+      GOMAXPROCS: 1
+    ports:
+    - "8000:8000"
+    expose:
+      - "8000"
+      - "8080"
