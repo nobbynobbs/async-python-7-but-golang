@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path"
@@ -16,33 +17,19 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"emulator/entities"
 )
 
-type Point [2]float64
-
-type RouteInfo struct {
-	Name             string  `json:"name"`
-	FirstStationName string  `json:"station_start_name"`
-	LastStationName  string  `json:"station_stop_name"`
-	Coordinates      []Point `json:"coordinates"`
-}
-
-type BusInfo struct {
-	Id    string  `json:"busId"`
-	Route string  `json:"route"`
-	Lat   float64 `json:"lat"`
-	Lng   float64 `json:"lng"`
-}
-
 type Emulator struct {
-	Ctx context.Context
-	WG *sync.WaitGroup
-	ServerURL string
-	Buses chan BusInfo
-	RoutesDir string
-	RoutesFiles []os.FileInfo
+	Ctx              context.Context
+	WG               *sync.WaitGroup
+	ServerURL        string
+	Buses            chan entities.BusInfo
+	RoutesDir        string
+	RoutesFiles      []os.FileInfo
 	ConnectionsCount int
-	BusesPerRoute int
+	BusesPerRoute    int
 }
 
 func (e *Emulator) Run() {
@@ -68,10 +55,11 @@ func (e *Emulator) Run() {
 				log.Printf("unable to open file: %s\n", err)
 				return
 			}
-			f.Close()
+			_ = f.Close()
 
-			route := &RouteInfo{}
-			err = json.Unmarshal(fileContent, route)
+			route := entities.RouteInfo{}
+
+			err = route.UnmarshalJSON(fileContent)
 			if err != nil {
 				log.Printf("unable to unmarshal json: %s\n", err)
 				return
@@ -122,8 +110,13 @@ func (e *Emulator) sendForever(ws *websocket.Conn) {
 		select {
 		case <-e.Ctx.Done():
 			return
-		case bus := <- e.Buses:
-			if err := ws.WriteJSON(bus); err != nil {
+		case bus := <-e.Buses:
+			msg, err := bus.MarshalJSON()
+			if err != nil {
+				log.Printf("unable to serialize message %s\n", err)
+				continue
+			}
+			if err := ws.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 				log.Printf("unable to send message to server %s\n", err)
 				return
 			}
@@ -134,18 +127,17 @@ func (e *Emulator) sendForever(ws *websocket.Conn) {
 func (e *Emulator) spawnBus(
 	busId,
 	route string,
-	coordinates []Point,
+	coordinates []entities.Point,
 ) {
 	defer e.WG.Done()
-
+	bus := entities.BusInfo{}
 	for {
 		for _, point := range coordinates {
-			bus := BusInfo{
-				Id:    busId,
-				Route: route,
-				Lat:   point[0],
-				Lng:   point[1],
-			}
+			bus.Id = busId
+			bus.Route = route
+			bus.Lat = point[0]
+			bus.Lng = point[1]
+
 			select {
 			case <-e.Ctx.Done():
 				return
@@ -187,15 +179,18 @@ func main() {
 	wg := &sync.WaitGroup{}
 
 	app := Emulator{
-		Ctx: ctx,
-		WG:  wg,
-		ServerURL: getEnv("EMULATOR_SERVER_URL", "ws://127.0.0.1:8080"),
-		Buses: make(chan BusInfo),
-		RoutesDir: routesDir,
-		RoutesFiles: files,
+		Ctx:              ctx,
+		WG:               wg,
+		ServerURL:        getEnv("EMULATOR_SERVER_URL", "ws://127.0.0.1:8080"),
+		Buses:            make(chan entities.BusInfo),
+		RoutesDir:        routesDir,
+		RoutesFiles:      files,
 		ConnectionsCount: getIntEnv("EMULATOR_CONNECTIONS_COUNT", 5),
-		BusesPerRoute: getIntEnv("EMULATOR_BUSES_PER_ROUTE", 20),
+		BusesPerRoute:    getIntEnv("EMULATOR_BUSES_PER_ROUTE", 20),
 	}
+
+	go http.ListenAndServe(":8088", nil) // for profiler endpoints
+
 	app.Run()
 }
 
@@ -216,7 +211,7 @@ func getIntEnv(name string, deflt int) int {
 	}
 
 	intVal, err := strconv.Atoi(strVal)
-	if err != nil{
+	if err != nil {
 		return deflt
 	}
 

@@ -16,6 +16,8 @@ services:
       EMULATOR_BUSES_PER_ROUTE: 10
       EMULATOR_CONNECTIONS_COUNT: 5
       GOMAXPROCS: 1
+    ports:
+    - "8088:8088"
 
   server:
     build:

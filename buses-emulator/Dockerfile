@@ -1,6 +1,5 @@
 FROM golang:1.13-alpine as builder
-COPY main.go go.mod go.sum /build/
-COPY vendor /build/vendor
+COPY . /build/
 WORKDIR /build
 RUN ls -la .
 ENV CGO_ENABLED=0

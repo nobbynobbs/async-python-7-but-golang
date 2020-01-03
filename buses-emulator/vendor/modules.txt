@@ -1,2 +1,7 @@
 # github.com/gorilla/websocket v1.4.1
 github.com/gorilla/websocket
+# github.com/mailru/easyjson v0.7.0
+github.com/mailru/easyjson
+github.com/mailru/easyjson/buffer
+github.com/mailru/easyjson/jlexer
+github.com/mailru/easyjson/jwriter
