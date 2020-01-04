@@ -50,7 +50,7 @@ func easyjson3e8ab7adDecodeEmulatorEntities(in *jlexer.Lexer, out *RouteInfo) {
 				in.Delim('[')
 				if out.Coordinates == nil {
 					if !in.IsDelim(']') {
-						out.Coordinates = make([]Point, 0, 4)
+						out.Coordinates = make([]Point, 0, 8)
 					} else {
 						out.Coordinates = []Point{}
 					}
@@ -66,7 +66,7 @@ func easyjson3e8ab7adDecodeEmulatorEntities(in *jlexer.Lexer, out *RouteInfo) {
 						v2 := 0
 						for !in.IsDelim(']') {
 							if v2 < 2 {
-								(v1)[v2] = float64(in.Float64())
+								(v1)[v2] = float32(in.Float32())
 								v2++
 							} else {
 								in.SkipRecursive()
@@ -125,7 +125,7 @@ func easyjson3e8ab7adEncodeEmulatorEntities(out *jwriter.Writer, in RouteInfo) {
 					if v5 > 0 {
 						out.RawByte(',')
 					}
-					out.Float64(float64((v4)[v5]))
+					out.Float32(float32((v4)[v5]))
 				}
 				out.RawByte(']')
 			}
@@ -182,9 +182,9 @@ func easyjson3e8ab7adDecodeEmulatorEntities1(in *jlexer.Lexer, out *BusInfo) {
 		case "route":
 			out.Route = string(in.String())
 		case "lat":
-			out.Lat = float64(in.Float64())
+			out.Lat = float32(in.Float32())
 		case "lng":
-			out.Lng = float64(in.Float64())
+			out.Lng = float32(in.Float32())
 		default:
 			in.SkipRecursive()
 		}
@@ -212,12 +212,12 @@ func easyjson3e8ab7adEncodeEmulatorEntities1(out *jwriter.Writer, in BusInfo) {
 	{
 		const prefix string = ",\"lat\":"
 		out.RawString(prefix)
-		out.Float64(float64(in.Lat))
+		out.Float32(float32(in.Lat))
 	}
 	{
 		const prefix string = ",\"lng\":"
 		out.RawString(prefix)
-		out.Float64(float64(in.Lng))
+		out.Float32(float32(in.Lng))
 	}
 	out.RawByte('}')
 }

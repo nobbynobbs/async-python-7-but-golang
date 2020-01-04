@@ -1,6 +1,6 @@
 package entities
 
-type Point [2]float64
+type Point [2]float32
 
 type RouteInfo struct {
 	Name             string  `json:"name"`
@@ -12,6 +12,6 @@ type RouteInfo struct {
 type BusInfo struct {
 	Id    string  `json:"busId"`
 	Route string  `json:"route"`
-	Lat   float64 `json:"lat"`
-	Lng   float64 `json:"lng"`
+	Lat   float32 `json:"lat"`
+	Lng   float32 `json:"lng"`
 }

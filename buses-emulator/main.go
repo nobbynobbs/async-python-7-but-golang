@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"nhooyr.io/websocket"
 
 	"emulator/entities"
 )
@@ -92,12 +92,15 @@ func (e *Emulator) sendBusInfo() {
 			return
 		default:
 			func() { // use closure for correct defer scope
-				ws, _, err := websocket.DefaultDialer.Dial(e.ServerURL, nil)
+				dialCtx, cancel := context.WithTimeout(context.Background(), 1 * time.Second)
+				defer cancel()
+
+				ws, _, err := websocket.Dial(dialCtx, e.ServerURL, nil)
 				if err != nil {
 					log.Printf("unable connect to server %s\n", err)
 					return
 				}
-				defer ws.Close()
+				defer ws.Close(websocket.StatusInternalError, "internal error")
 				e.sendForever(ws)
 			}()
 		}
@@ -116,7 +119,7 @@ func (e *Emulator) sendForever(ws *websocket.Conn) {
 				log.Printf("unable to serialize message %s\n", err)
 				continue
 			}
-			if err := ws.WriteMessage(websocket.BinaryMessage, msg); err != nil {
+			if err := ws.Write(e.Ctx, websocket.MessageBinary, msg); err != nil {
 				log.Printf("unable to send message to server %s\n", err)
 				return
 			}
